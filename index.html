@@ -131,7 +131,14 @@
         let finalCheckString = passportNumber + passportCheckDigit + birthDate + birthCheckDigit + expiryDate + expiryCheckDigit;
         let finalCheckDigit = computeCheckDigit(finalCheckString);
 
-        return `P<${countryCode}${name.replace(/ /g, "<")}<<<<<<<<<<<<<<<<<<\n${passportNumber}${passportCheckDigit}${countryCode}${birthDate}${birthCheckDigit}${gender}${expiryDate}${expiryCheckDigit}<<<<<<<<<<<<<<${finalCheckDigit}`;
+        // Format the name correctly
+        let formattedName = name.toUpperCase().replace(/ /g, "<");
+        while (formattedName.length < 39) formattedName += "<"; // Pad to 39 characters
+
+        let line1 = `P<${countryCode}${formattedName.substring(0, 39)}`;
+        let line2 = `${passportNumber}${passportCheckDigit}${countryCode}${birthDate}${birthCheckDigit}${gender}${expiryDate}${expiryCheckDigit}<<<<<<<<${finalCheckDigit}`;
+
+        return `${line1}\n${line2}`;
     }
 
     document.getElementById("mrzForm").addEventListener("submit", function(event) {

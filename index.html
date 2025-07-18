@@ -342,19 +342,34 @@
     }
 
     function generateMRZ(passportNumber, birthDate, expiryDate, countryCode, gender, name) {
+        function computeCheckDigit(input) {
+            const weights = [7, 3, 1];
+            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ<';
+            return [...input].reduce((sum, char, i) => {
+                const value = chars.indexOf(char);
+                return sum + value * weights[i % 3];
+            }, 0) % 10;
+        }
+
+        passportNumber = passportNumber.toUpperCase().padEnd(9, '<');
         let passportCheckDigit = computeCheckDigit(passportNumber);
         let birthCheckDigit = computeCheckDigit(birthDate);
         let expiryCheckDigit = computeCheckDigit(expiryDate);
-        
-        let finalCheckString = passportNumber + passportCheckDigit + birthDate + birthCheckDigit + expiryDate + expiryCheckDigit;
-        let finalCheckDigit = computeCheckDigit(finalCheckString);
 
-        // Format the name correctly
-        let formattedName = name.toUpperCase().replace(/ /g, "<");
-        while (formattedName.length < 39) formattedName += "<"; // Pad to 39 characters
+        // Build partial line2 (43 characters before final check digit)
+        let line2Core = `${passportNumber}${passportCheckDigit}${countryCode}${birthDate}${birthCheckDigit}${gender}${expiryDate}${expiryCheckDigit}`;
 
+        // Calculate padding needed to reach 43 chars before final check digit
+        let optionalField = '<'.repeat(43 - line2Core.length);
+        let line2Full = line2Core + optionalField;
+        let finalCheckDigit = computeCheckDigit(line2Full);
+
+        let line2 = `${line2Full}${finalCheckDigit}`;
+
+        // Format name line
+        let formattedName = name.toUpperCase().replace(/ /g, '<<');
+        while (formattedName.length < 39) formattedName += '<';
         let line1 = `P<${countryCode}${formattedName.substring(0, 39)}`;
-        let line2 = `${passportNumber}${passportCheckDigit}${countryCode}${birthDate}${birthCheckDigit}${gender}${expiryDate}${expiryCheckDigit}<<<<<<<<${finalCheckDigit}`;
 
         return `${line1}\n${line2}`;
     }

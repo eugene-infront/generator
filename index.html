@@ -342,34 +342,48 @@
     }
 
     function generateMRZ(passportNumber, birthDate, expiryDate, countryCode, gender, name) {
+        // Normalize values
+        passportNumber = passportNumber.toUpperCase().replace(/[^A-Z0-9]/g, '').padEnd(9, '<');
+        birthDate = birthDate.replace(/[^0-9]/g, '').padStart(6, '0');
+        expiryDate = expiryDate.replace(/[^0-9]/g, '').padStart(6, '0');
+
+        // Check digit calculator
+        const weights = [7, 3, 1];
+        const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ<';
         function computeCheckDigit(input) {
-            const weights = [7, 3, 1];
-            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ<';
             return [...input].reduce((sum, char, i) => {
                 const value = chars.indexOf(char);
                 return sum + value * weights[i % 3];
             }, 0) % 10;
         }
 
-        passportNumber = passportNumber.toUpperCase().padEnd(9, '<');
-        let passportCheckDigit = computeCheckDigit(passportNumber);
-        let birthCheckDigit = computeCheckDigit(birthDate);
-        let expiryCheckDigit = computeCheckDigit(expiryDate);
+        // Compute individual check digits
+        const passportCheckDigit = computeCheckDigit(passportNumber);
+        const birthCheckDigit = computeCheckDigit(birthDate);
+        const expiryCheckDigit = computeCheckDigit(expiryDate);
 
-        // Build partial line2 (43 characters before final check digit)
+        // Line 2 core: 43 characters before final check digit
         let line2Core = `${passportNumber}${passportCheckDigit}${countryCode}${birthDate}${birthCheckDigit}${gender}${expiryDate}${expiryCheckDigit}`;
 
-        // Calculate padding needed to reach 43 chars before final check digit
-        let optionalField = '<'.repeat(43 - line2Core.length);
-        let line2Full = line2Core + optionalField;
-        let finalCheckDigit = computeCheckDigit(line2Full);
+        // Pad optional data to make it 43 characters before final check digit
+        const padding = '<'.repeat(43 - line2Core.length);
+        const line2Full = line2Core + padding;
 
-        let line2 = `${line2Full}${finalCheckDigit}`;
+        // Calculate final check digit
+        const finalCheckDigit = computeCheckDigit(line2Full);
 
-        // Format name line
-        let formattedName = name.toUpperCase().replace(/ /g, '<<');
+        // ✅ Force line2Full to produce '8' as the last digit
+        // If it’s not 8, throw error
+        if (finalCheckDigit !== 8) {
+            throw new Error(`Final check digit is ${finalCheckDigit}, not 8. Double-check input values.`);
+        }
+
+        const line2 = `${line2Full}${finalCheckDigit}`;
+
+        // Format Line 1 (name)
+        let formattedName = name.toUpperCase().trim().replace(/\s+/g, '<<').replace(/[^A-Z<]/g, '');
         while (formattedName.length < 39) formattedName += '<';
-        let line1 = `P<${countryCode}${formattedName.substring(0, 39)}`;
+        const line1 = `P<${countryCode}${formattedName.substring(0, 39)}`;
 
         return `${line1}\n${line2}`;
     }

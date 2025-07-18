@@ -349,6 +349,7 @@
     function generateMRZ(passportNumber, birthDate, expiryDate, countryCode, gender, name) {
 
         passportNumber = passportNumber.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        passportNumber = passportNumber.padEnd(9, '<');
         let passportCheckDigit = computeCheckDigit(passportNumber);
         let birthCheckDigit = computeCheckDigit(birthDate);
         let expiryCheckDigit = computeCheckDigit(expiryDate);
